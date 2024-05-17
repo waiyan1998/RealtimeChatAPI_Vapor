@@ -18,11 +18,16 @@ public func configure(_ app: Application) async throws {
         tls: .prefer(try .init(configuration: .clientDefault)))
     ), as: .psql)
 
-    app.migrations.add(CreateTodo())
+    app.migrations.add(CreateUser())
+    app.migrations.add(CreateMessage())
+    app.migrations.add(CreateChat())
+    app.migrations.add(CreateChatMember())
+    app.migrations.add(CreateUserToken())
 
-    app.views.use(.leaf)
+    try await app.autoMigrate()
 
 
     // register routes
     try routes(app)
 }
+

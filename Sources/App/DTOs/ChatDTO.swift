@@ -1,8 +1,10 @@
 
 import Foundation
 import Fluent
+import Vapor
 
 struct ChatDTO  : Content  {
+    
     var access_token : String?
     var user_id : UUID?
     

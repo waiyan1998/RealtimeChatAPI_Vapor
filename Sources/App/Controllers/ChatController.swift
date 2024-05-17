@@ -6,4 +6,5 @@
 //
 
 import Foundation
-func boot(routes: RoutesBuilder) throws {
+import Vapor
+

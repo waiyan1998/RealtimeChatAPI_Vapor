@@ -12,25 +12,27 @@ import struct Foundation.UUID
 /// It is recommended you write your model with sendability checking on and then suppress the warning
 /// afterwards with `@unchecked Sendable`.
 final class ChatMember : Model, @unchecked Sendable {
-    static let schema = "chatmembers"
+    
+    static let schema = "chat_members"
     
     @ID(key: .id)
     var id: UUID?
+    
+    @Parent(key: .chat_id)
+    var chat : Chat
+    
+    @Parent(key: .user_id)
+    var user : User
 
-    @Field(key: "title")
-    var title: String
+  
 
     init() { }
 
-    init(id: UUID? = nil, title: String) {
+    init(id: UUID? = nil,  ChatID : Chat.IDValue , UserID : User.IDValue) {
         self.id = id
-        self.title = title
+        self.$chat.id = ChatID
+        self.$user.id = UserID
     }
     
-    func toDTO() -> TodoDTO {
-        .init(
-            id: self.id,
-            title: self.$title.value
-        )
-    }
+    
 }
