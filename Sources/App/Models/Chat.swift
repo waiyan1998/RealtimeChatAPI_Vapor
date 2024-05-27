@@ -32,9 +32,23 @@ final class Chat: Model , @unchecked Sendable  {
         self.$createdByuser_id.id = userID
         
     }
+    
+    var DTO : ChatDTO {
+        .init(chat_id : self.id , chat_type  : self.type.rawValue  , members: [])
+    }
+    
+    
+    
+}
+extension Chat {
+    struct Create  : Content {
+        var type  : String?
+        var members : [UserDTO]?
+    }
 }
 
-enum ChatType: String, Content {
-    case oneOnOne
+
+enum ChatType : String , Content  {
+    case direct
     case group
 }

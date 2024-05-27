@@ -5,21 +5,22 @@ import Vapor
 
 struct ChatDTO  : Content  {
     
-    var access_token : String?
-    var user_id : UUID?
+    var chat_id  : UUID?
+    var chat_type : String?
+    var members  : [UserDTO]?
     
-    var Model : UserToken {
+    var Model : Chat {
         
-        let model = UserToken()
+        let model = Chat()
         
-        if let value  = access_token{
-            model.value = value
+        if let id   = chat_id {
+            model.id = id
         }
            
-        if let UserID  = user_id  {
-            model.$user.id = UserID
+        if let type  = chat_type  {
+            model.type = ChatType(rawValue: type)!
         }
-      
+        
         return model
     }
 }

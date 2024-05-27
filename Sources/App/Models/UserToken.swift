@@ -9,11 +9,9 @@ import Foundation
 import Fluent
 import Vapor
 
-
-
-final class UserToken : Model, @unchecked Sendable {
+final class UserToken : Model , @unchecked Sendable {
   
-    static let schema = "users"
+    static let schema = "user_tokens"
     
         @ID(key: .id)
         var id: UUID?
@@ -33,11 +31,14 @@ final class UserToken : Model, @unchecked Sendable {
                
            }
     
-    
+    var DTO : UserTokenDTO {
+        .init(access_token: self.value, user_id: self.$user.id.uuidString)
+    }
     
 }
 
 extension UserToken: ModelTokenAuthenticatable {
+
     static let valueKey = \UserToken.$value
     static let userKey = \UserToken.$user
 

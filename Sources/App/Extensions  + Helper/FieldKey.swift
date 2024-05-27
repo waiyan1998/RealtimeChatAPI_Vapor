@@ -23,6 +23,6 @@ extension FieldKey {
     static let recipient_id = FieldKey (stringLiteral: "recipient_id" )
     static let created_at = FieldKey (stringLiteral: "created_at" )
     static let username = FieldKey (stringLiteral: "username" )
-    static let value = FieldKey (stringLiteral: "value" )
+    static let value = FieldKey (stringLiteral: "value")
 
 }
