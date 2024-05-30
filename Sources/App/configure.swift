@@ -23,6 +23,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateChat())
     app.migrations.add(CreateChatMember())
     app.migrations.add(CreateUserToken())
+    app.migrations.add(CreatePresence())
 
     try await app.autoMigrate()
  

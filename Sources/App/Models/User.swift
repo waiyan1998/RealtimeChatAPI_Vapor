@@ -5,38 +5,38 @@ import Vapor
 
 
 final class User : Model , @unchecked Sendable {
-
-    static let schema = "users"
-
-    @ID(key: .id)
-    var id: UUID?
+    static let  schema  = "users"
     
-    
-
-    @Field(key: .name)
-    var name: String
-
+    @ID( key: .id )
+    var id : UUID?
+    @Field(key: .username)
+    var username : String
     @Field(key: .email)
     var email: String
-
-  
-
     @Field(key: .passwordHash)
     var passwordHash : String
+    @Timestamp(key: .created_at, on: .create)
+    var createdAt: Date?
+    @Timestamp(key: .updatedAt, on: .update)
+    var updatedAt: Date?
 
-    init() { }
-
-
-
-    init( _ id : UUID?  = nil , name : String , email : String , passwordHash : String  )  {
-
-        self.id = id
-        self.name = name
-        self.email = email
-        self.passwordHash = passwordHash
-       
-
+    init() { 
+    
     }
+    
+    init( id : UUID? = nil , username : String , email : String , passwordHash : String , createAt : Date  = Date(), updatedAt : Date = Date())
+    {
+        self.id = id
+        self.username = username
+        self.email  = email
+        self.passwordHash = passwordHash
+        self.createdAt = createAt
+        self.updatedAt = updatedAt
+    }
+
+
+
+ 
 }
 
 extension User: ModelAuthenticatable {
@@ -48,11 +48,10 @@ extension User: ModelAuthenticatable {
     }
 }
 
-
 extension User {
 
     struct Create: Content {
-        var name: String?
+        var username : String?
         var email: String?
         var password: String?
         var comfrim_password: String?
@@ -61,14 +60,14 @@ extension User {
   
 
     var DTO :  UserDTO {
-        return UserDTO( user_id : self.id, username: self.name , email : self.email )
+        return UserDTO( user_id : self.id, username: self.username , email : self.email )
     }
 
 }
 //
 extension User.Create: Validatable {
     static func validations(_ validations: inout Validations) {
-        validations.add("name", as: String.self, is: !.empty)
+        validations.add("username", as: String.self, is: !.empty)
         validations.add("email", as: String.self, is: .email)
         validations.add("password", as: String.self, is: .count(8...))
     }

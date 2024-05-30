@@ -4,35 +4,67 @@ import Vapor
 import Fluent
 import WebSocketKit
 
+
+
+struct MessageInput: Codable {
+    var sender_id: UUID
+    var recipient_id: UUID
+    var content: String
+}
+
 struct ChatController : RouteCollection {
     
+    let webSocketManager = WebSocketManager()
     
     func boot(routes: RoutesBuilder) throws {
         let chat = routes.grouped("chat")
         let tokenProtected = chat.grouped(UserToken.authenticator())
         tokenProtected.post("add", use: createChat)
         tokenProtected.get("getlists", use: chatlists)
-        
-        chat.webSocket("message") { req , ws  in
-            ws.onText { ws, text in
-            
-                // String received by this WebSocket.
-                guard let message = text.decode(as: MessageDTO.self)?.model else {
-                    return
-                }
-                print(message)
-                do {
-                    try await  message.save(on: req.db)
-                }catch{
-                    print(error.localizedDescription)
-                }
-            
-                
-            }
-
-        }
+        chat.webSocket("connect", onUpgrade: handleWebSocket)
+      
+       
         
     }
+    
+    @Sendable private func handleWebSocket(req: Request, ws: WebSocket) {
+         guard let userID = req.query[UUID.self, at: "userID"] else {
+             ws.close(promise: nil)
+             return
+         }
+        print(userID)
+
+         webSocketManager.addConnection(userID, ws)
+
+         ws.onText {  ws, text in
+             guard let data = text.data(using: .utf8),
+                   let messageInput = try? JSONDecoder().decode(MessageInput.self, from: data) else {
+                 return
+             }
+             self.handleMessage(messageInput, app: req.application)
+         }
+     }
+    
+    
+    private func handleMessage(_ message: MessageInput, app: Application) {
+        let newMessage = Message(content: message.content , senderID: message.sender_id, recipientID: message.recipient_id  )
+           newMessage.save(on: app.db).whenComplete { result in
+               switch result {
+               case .success:
+                   do {
+                       let messageData = try JSONEncoder().encode(message)
+                       if let messageString = String(data: messageData, encoding: .utf8) {
+                           webSocketManager.sendMessage(to: message.recipient_id, message: messageString)
+                       }
+                   } catch {
+                       print("Failed to encode message: \(error)")
+                   }
+               case .failure(let error):
+                   print("Failed to save message: \(error)")
+               }
+           }
+       }
+    
     
     @Sendable func createChat(req : Request) async throws -> MyResponse<ChatDTO>
     {

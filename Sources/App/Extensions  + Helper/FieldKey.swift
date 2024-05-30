@@ -24,5 +24,7 @@ extension FieldKey {
     static let created_at = FieldKey (stringLiteral: "created_at" )
     static let username = FieldKey (stringLiteral: "username" )
     static let value = FieldKey (stringLiteral: "value")
-
+    static let updatedAt  = FieldKey (stringLiteral: "updatedAt")
+    static let status = FieldKey (stringLiteral: "status")
+    static let last_seen = FieldKey (stringLiteral: "last_seen")
 }

@@ -83,12 +83,12 @@ struct AuthController: RouteCollection {
         guard let pw = create.password , let con_pw = create.comfrim_password , pw == con_pw else {
             return  MyResponse(statusCode:  0 , message: "Password Did'nt match!!!", data: nil)
         }
-        guard let name = create.name , let email = create.email else {
+        guard let username = create.username , let email = create.email else {
             return  MyResponse(statusCode:  0 , message: " No Data!!!", data: nil)
         }
        
         let pw_hash = try Bcrypt.hash(pw)
-        let user =  User(name: name , email: email , passwordHash: pw_hash)
+        let user =  User(username : username  , email: email , passwordHash: pw_hash)
             try await user.save(on: req.db)
         let user_token = try user.generateToken()
             try await user_token.save(on: req.db)
