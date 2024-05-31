@@ -7,25 +7,25 @@ final class WebSocketManager :  @unchecked Sendable {
     private var connections: [UUID: WebSocket] = [:]
     private let lock = NSLock()
 
-    func addConnection(_ userID: UUID, _ ws: WebSocket) {
+    func addConnection(_ chatID: UUID, _ ws: WebSocket) {
         lock.lock()
-        connections[userID] = ws
+        connections[chatID] = ws
         lock.unlock()
 
         ws.onClose.whenComplete { [weak self] _ in
-            self?.removeConnection(userID)
+            self?.removeConnection(chatID)
         }
     }
 
-    func removeConnection(_ userID: UUID) {
+    func removeConnection(_ chatID: UUID) {
         lock.lock()
-        connections.removeValue(forKey: userID)
+        connections.removeValue(forKey: chatID)
         lock.unlock()
     }
 
-    func sendMessage(to userID: UUID, message: String) {
+    func sendMessage(to chatID : UUID, message: String) {
         lock.lock()
-        if let ws = connections[userID] {
+        if let ws = connections[chatID] {
             ws.send(message)
         }
         lock.unlock()

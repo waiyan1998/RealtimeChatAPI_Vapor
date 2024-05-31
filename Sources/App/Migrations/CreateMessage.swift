@@ -17,6 +17,7 @@ struct CreateMessage : AsyncMigration {
             .field(.content,.string,.required)
             .field(.recipient_id, .uuid, .references("users", "id") ,.required)
             .field(.sender_id, .uuid, .references("users", "id") ,.required)
+            .field(.chat_id , .uuid ,.references("chats", "id") , . required)
             .field(.created_at,.datetime,.required)
             .create()
     }

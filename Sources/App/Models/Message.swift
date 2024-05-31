@@ -24,19 +24,22 @@ final class Message : Model, @unchecked Sendable {
 
        @Parent(key: .recipient_id)
        var recipient_id  : User
+        
+        @Parent(key: .chat_id)
+        var chat_id  : Chat
     
        @Timestamp(key: .created_at, on: .create)
         var created_at : Date?
        
-      init() {}
+        init() {}
 
-    init(id: UUID? = nil, content : String ,  senderID : User.IDValue , recipientID  : User.IDValue  , created_at : Date = Date()) {
-           self.id = id
-           self.content = content
-           self.$sender_id.id = senderID
-           self.$recipient_id.id = recipientID
-           self.created_at = created_at
-       }
+        init(id: UUID? = nil, content : String ,  senderID : User.IDValue , recipientID  : User.IDValue  , created_at : Date = Date()) {
+               self.id = id
+               self.content = content
+               self.$sender_id.id = senderID
+               self.$recipient_id.id = recipientID
+               self.created_at = created_at
+           }
     
     
     

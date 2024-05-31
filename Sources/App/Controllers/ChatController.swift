@@ -6,11 +6,7 @@ import WebSocketKit
 
 
 
-struct MessageInput: Codable {
-    var sender_id: UUID
-    var recipient_id: UUID
-    var content: String
-}
+
 
 struct ChatController : RouteCollection {
     
@@ -28,17 +24,17 @@ struct ChatController : RouteCollection {
     }
     
     @Sendable private func handleWebSocket(req: Request, ws: WebSocket) {
-         guard let userID = req.query[UUID.self, at: "userID"] else {
+         guard let chatID  = req.query[UUID.self, at: "chat_id"] else {
              ws.close(promise: nil)
              return
          }
-        print(userID)
+        print(chatID)
 
-         webSocketManager.addConnection(userID, ws)
+         webSocketManager.addConnection(chatID, ws)
 
          ws.onText {  ws, text in
              guard let data = text.data(using: .utf8),
-                   let messageInput = try? JSONDecoder().decode(MessageInput.self, from: data) else {
+                   let messageInput = try? JSONDecoder().decode(MessageDTO.self, from: data) else {
                  return
              }
              self.handleMessage(messageInput, app: req.application)
@@ -46,15 +42,16 @@ struct ChatController : RouteCollection {
      }
     
     
-    private func handleMessage(_ message: MessageInput, app: Application) {
-        let newMessage = Message(content: message.content , senderID: message.sender_id, recipientID: message.recipient_id  )
+    private func handleMessage(_ message: MessageDTO, app: Application) {
+        let newMessage = message.model
+        
            newMessage.save(on: app.db).whenComplete { result in
                switch result {
                case .success:
                    do {
                        let messageData = try JSONEncoder().encode(message)
                        if let messageString = String(data: messageData, encoding: .utf8) {
-                           webSocketManager.sendMessage(to: message.recipient_id, message: messageString)
+                           webSocketManager.sendMessage(to: message.chat_id, message: messageString)
                        }
                    } catch {
                        print("Failed to encode message: \(error)")
