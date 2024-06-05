@@ -14,8 +14,6 @@ struct CreateChat : AsyncMigration {
     func prepare(on database: Database) async throws {
         try await database.schema("chats")
             .id()
-            .field(.type,.string,.required)
-            .field(.createdByuser_id, .uuid, .references("users", "id") ,.required)
             .create()
     }
 

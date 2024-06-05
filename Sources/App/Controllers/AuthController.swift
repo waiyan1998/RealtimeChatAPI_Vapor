@@ -58,8 +58,6 @@ struct AuthController: RouteCollection {
         return  MyResponse(statusCode: 0 , message: "No Users!!", data: nil)
     }
     
-    
-
     @Sendable func me(req: Request) async throws -> MyResponse<UserDTO> {
 
         guard let token = req.headers.bearerAuthorization?.token else {
@@ -74,10 +72,7 @@ struct AuthController: RouteCollection {
         return  MyResponse(statusCode: 1 , message: nil , data: [user.DTO])
     }
     
-    
-    
-
-   @Sendable func register(req: Request) async throws -> MyResponse<UserTokenDTO> {
+    @Sendable func register(req: Request) async throws -> MyResponse<UserTokenDTO> {
         try User.Create.validate(content: req)
         let create = try req.content.decode(User.Create.self)
         guard let pw = create.password , let con_pw = create.comfrim_password , pw == con_pw else {
@@ -97,16 +92,16 @@ struct AuthController: RouteCollection {
 
      }
     
-     @Sendable func logout(req  : Request) async throws -> MyResponse<UserTokenDTO> {
-           guard let token = req.headers.bearerAuthorization?.token else {
-               return MyResponse(statusCode: 0 , message: "Invalid Token!!", data: nil)
-              }
-            if let user_token =  try await UserToken.query(on: req.db).filter(\.$value == token).first()  {
-                   try await  user_token.delete(on: req.db)
-                 return MyResponse(statusCode: 1 , message: "Logout Sucess !!", data: nil)
-             }
-           
-           return MyResponse(statusCode: 0 , message: "Logout Fail", data: nil)
-       }
+    @Sendable func logout(req  : Request) async throws -> MyResponse<UserTokenDTO> {
+        guard let token = req.headers.bearerAuthorization?.token else {
+            return MyResponse(statusCode: 0 , message: "Invalid Token!!", data: nil)
+            }
+        if let user_token =  try await UserToken.query(on: req.db).filter(\.$value == token).first()  {
+                try await  user_token.delete(on: req.db)
+                return MyResponse(statusCode: 1 , message: "Logout Sucess !!", data: nil)
+            }
+        
+        return MyResponse(statusCode: 0 , message: "Logout Fail", data: nil)
+    }
 
 }

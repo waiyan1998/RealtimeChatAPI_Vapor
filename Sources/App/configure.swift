@@ -19,10 +19,10 @@ public func configure(_ app: Application) async throws {
     ), as: .psql)
 
     app.migrations.add(CreateUser())
-    app.migrations.add(CreateMessage())
     app.migrations.add(CreateChat())
     app.migrations.add(CreateChatMember())
     app.migrations.add(CreateUserToken())
+    app.migrations.add(CreateMessage())
     app.migrations.add(CreatePresence())
 
     try await app.autoMigrate()

@@ -20,26 +20,28 @@ final class Message : Model, @unchecked Sendable {
         var content : String
 
        @Parent(key: .sender_id)
-       var sender_id : User
+       var sender : User
 
-       @Parent(key: .recipient_id)
-       var recipient_id  : User
         
         @Parent(key: .chat_id)
-        var chat_id  : Chat
+        var chat  : Chat
     
        @Timestamp(key: .created_at, on: .create)
         var created_at : Date?
        
         init() {}
 
-        init(id: UUID? = nil, content : String ,  senderID : User.IDValue , recipientID  : User.IDValue  , created_at : Date = Date()) {
+        init(id: UUID? = nil, content : String ,  senderID : User.IDValue , ChatID : Chat.IDValue , created_at : Date = Date()) {
                self.id = id
                self.content = content
-               self.$sender_id.id = senderID
-               self.$recipient_id.id = recipientID
+               self.$sender.id = senderID
+               self.$chat.id = ChatID
                self.created_at = created_at
-           }
+        }
+    
+    var DTO : MessageDTO {
+        return MessageDTO(message_id: self.id , sender_id: self.$sender.id , chat_id: self.$chat.id , createDate: self.created_at?.toString())
+    }
     
     
     

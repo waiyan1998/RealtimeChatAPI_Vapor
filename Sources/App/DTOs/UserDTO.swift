@@ -9,8 +9,8 @@ import Foundation
 import Vapor
 import Fluent 
 
-struct  UserDTO : Content , @unchecked  Sendable {
-    
+struct  UserDTO : Content , Equatable , @unchecked  Sendable {
+   
     var user_id : UUID?
     var username : String?
     var email : String?
@@ -35,6 +35,16 @@ struct  UserDTO : Content , @unchecked  Sendable {
         if let updatedAt = model.updatedAt{
             model.updatedAt = updatedAt
         }
+        return model
+    }
+    
+    func  member( _ chatID : UUID ) ->  ChatMember {
+        let model = ChatMember()
+            model.$chat.id = chatID
+        if let user_id = self.user_id {
+            model.$user.id = self.user_id!
+        }
+       
         return model
     }
     

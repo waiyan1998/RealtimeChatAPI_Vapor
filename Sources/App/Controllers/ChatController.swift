@@ -5,9 +5,6 @@ import Fluent
 import WebSocketKit
 
 
-
-
-
 struct ChatController : RouteCollection {
     
     let webSocketManager = WebSocketManager()
@@ -16,33 +13,47 @@ struct ChatController : RouteCollection {
         let chat = routes.grouped("chat")
         let tokenProtected = chat.grouped(UserToken.authenticator())
         tokenProtected.post("add", use: createChat)
+        tokenProtected.post("send", use: sendMessage)
+        tokenProtected.post("messages", use: messagelists)
         tokenProtected.get("getlists", use: chatlists)
         chat.webSocket("connect", onUpgrade: handleWebSocket)
       
-       
-        
     }
     
     @Sendable private func handleWebSocket(req: Request, ws: WebSocket) {
-         guard let chatID  = req.query[UUID.self, at: "chat_id"] else {
+         guard let id  = req.query[UUID.self, at: "id"] else {
              ws.close(promise: nil)
              return
          }
-        print(chatID)
+        guard let redirect_id  = req.query[UUID.self, at: "redirect_id"] else {
+            ws.close(promise: nil)
+            return
+        }
+        print(id)
+        print(redirect_id)
 
-         webSocketManager.addConnection(chatID, ws)
+         webSocketManager.addConnection(id, ws)
+       
 
          ws.onText {  ws, text in
-             guard let data = text.data(using: .utf8),
-                   let messageInput = try? JSONDecoder().decode(MessageDTO.self, from: data) else {
-                 return
-             }
-             self.handleMessage(messageInput, app: req.application)
+             
+             guard  let data = text.data(using: .utf8) else { return }
+             
+             do{
+                 let message = try JSONDecoder().decode(MessageDTO.self, from: data)
+                 print(message)
+                 self.handleMessage(message, app: req.application , redirect_id )
+            }catch{
+                print(error.localizedDescription)
+            }
+                                                        
+        
+             
          }
      }
     
     
-    private func handleMessage(_ message: MessageDTO, app: Application) {
+    private func handleMessage(_ message: MessageDTO, app: Application , _ redirect_id : UUID ) {
         let newMessage = message.model
         
            newMessage.save(on: app.db).whenComplete { result in
@@ -51,7 +62,10 @@ struct ChatController : RouteCollection {
                    do {
                        let messageData = try JSONEncoder().encode(message)
                        if let messageString = String(data: messageData, encoding: .utf8) {
-                           webSocketManager.sendMessage(to: message.chat_id, message: messageString)
+                           
+                           
+                           webSocketManager.sendMessage(to: redirect_id , message: messageString)
+                           
                        }
                    } catch {
                        print("Failed to encode message: \(error)")
@@ -62,78 +76,95 @@ struct ChatController : RouteCollection {
            }
        }
     
-    
-    @Sendable func createChat(req : Request) async throws -> MyResponse<ChatDTO>
+  
+    @Sendable func createChat ( req : Request ) async throws -> MyResponse<ChatDTO>
     {
         let create = try req.content.decode(Chat.Create.self)
         
-        guard let token = req.headers.bearerAuthorization?.token else {
-            return MyResponse(statusCode: 0 , message: "Invalid User Token!!" , data: nil)
-        }
-        guard let  user_token = try await UserToken.query(on: req.db)
-           .filter(\.$value == token).first()  else{
-            return MyResponse(statusCode: 0 , message: "User Not Found", data: nil)
-        }
-        
-        guard let type = ChatType(rawValue: create.type ?? "" ) else {
-            return MyResponse(statusCode: 0 , message: "Invalid Chat Type!", data: nil)
-        }
-        guard let members = create.members?.map({ $0.model }) else {
-            return MyResponse(statusCode: 0 , message: "Plz Add Chat Member!", data: nil)
+       
+//        guard let token = req.headers.bearerAuthorization?.token else {
+//                   return MyResponse(statusCode: 0 , message: "Invalid User Token!!" , data: nil)
+//        }
+
+        guard let members = create.members else {
+                   return MyResponse(statusCode: 0 , message: "Plz Add Chat Member!", data: nil)
         }
         
+        let chats = try await Chat.query(on: req.db).all()
         
-        if type == .direct , let member_id  = members.first?.id , let chat_member = try await ChatMember.query(on: req.db).filter(\.$user.$id == member_id).first() {
+        for chat in chats{
             
-            guard members.count == 1  else {
-                return MyResponse(statusCode: 0 , message: "Invalid Input!!" , data: nil)
-            }
-            
-            
-            guard var chatDTO = try await Chat.query(on: req.db).filter(\.$id == chat_member.$chat.id ).first()?.DTO else {
-                return MyResponse(statusCode: 0  , message: "No User Found!!" , data: nil )
-            }
-            
-            chatDTO.members = members.map({$0.DTO})
-            
-            
-            return MyResponse(statusCode: 1  , message: "Chat Created" , data: [chatDTO])
+            let  chat_members = try await chat.$members.get(on: req.db).map({ $0.DTO })
            
-        }
-        let chat =  Chat(type: type , userID: user_token.$user.id)
-        
-        try await chat.save(on: req.db)
-        var dto = chat.DTO
-        
-        for m in members {
-            if let user = try await User.find(m.requireID(), on: req.db) {
-                dto.members?.append(user.DTO)
-                let chat_member =  try ChatMember(ChatID:  chat.requireID() , UserID:  user.requireID() )
-                try await  chat_member.save(on: req.db)
+            
+            let sorted_chat_members = chat_members.sorted(by: { $0.user_id!.uuidString < $1.user_id!.uuidString })
+            let sorted_members = members.sorted(by: { $0.user_id!.uuidString < $1.user_id!.uuidString })
+            
+            print(sorted_members == sorted_chat_members )
+            
+            if  sorted_members == sorted_chat_members {
+                var ChatDTO = chat.DTO
+                    ChatDTO.members = sorted_chat_members
+                
+                return MyResponse(statusCode: 1 , message: "Chat Created !!" , data: [ChatDTO])
             }
         }
-        return MyResponse(statusCode: 0 , message: "Chat Created !!" , data: [dto])
+        
+        
+        
+        
+        let chat = Chat()
+        try await chat.save(on: req.db)
+        
+        let _members = members.map( { return $0.member(chat.id!)} )
+        for m in _members { try await m.save(on: req.db) }
+        var chatDTO = chat.DTO
+            chatDTO.members   = try await chat.$members.get(on: req.db).map({ $0.DTO })
+        
+        return MyResponse(statusCode: 1 , message: "Chat Created !!" , data: [chatDTO])
     }
     
+    @Sendable func sendMessage( req : Request ) async throws -> MyResponse<MessageDTO>
+    {
+        guard let token = req.headers.bearerAuthorization?.token else {
+            return MyResponse(statusCode: 0, message: "Invalid Token!!", data: nil)
+        }
+        let create = try req.content.decode(MessageDTO.self)
+        let message = create.model
+        try await message.save(on: req.db)
+        return MyResponse(statusCode: 1, message: "Sent", data: [message.DTO])
+    }
+    
+    @Sendable func messagelists ( req : Request ) async throws -> MyResponse<MessageDTO>
+    {
+        guard let chat_id   = req.query[UUID.self, at: "id"] else {
+          
+            return MyResponse(statusCode: 0, message: "Not Availiable Chat!!", data: nil)
+        }
+        let messages = try await Message.query(on: req.db).filter(\.$chat.$id == chat_id).sort(.created_at).all().map({ $0.DTO })
+        
+        return MyResponse(statusCode: 1, message: "Success", data: messages)
+    }
     
     @Sendable func chatlists(req : Request) async throws -> MyResponse<ChatDTO>
     {
         guard let token = req.headers.bearerAuthorization?.token else {
             return MyResponse(statusCode: 0 , message: "Invalid User Token!!" , data: nil)
         }
-        guard let  user_token = try await UserToken.query(on: req.db)
-           .filter(\.$value == token).first()  else{
-            return MyResponse(statusCode: 0 , message: "User Not Found", data: nil)
-        }
-       
-        let chats = try await Chat.query(on: req.db).filter(\.$createdByuser_id.$id  ==  user_token.$user.id ).all()
+//        guard let  user_token = try await UserToken.query(on: req.db)
+//           .filter(\.$value == token).first()  else{
+//            return MyResponse(statusCode: 0 , message: "User Not Found", data: nil)
+//        }
+//       
+        let chats = try await Chat.query(on: req.db).all()
         var dtos : [ChatDTO] = []
                                                                                                                          
         for chat in chats {
-            var dto = chat.DTO
-            dto.members = try await chat.$members.get(on: req.db).map({ $0.DTO })
+            let dto = chat.DTO
+           
             dtos.append(dto)
         }
+        
         
        
         return MyResponse(statusCode: 1 , message: "Chat lists" , data : dtos )

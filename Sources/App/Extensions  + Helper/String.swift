@@ -38,4 +38,8 @@ extension String {
         return formatter.date(from: self)
     }
     
+    var uuid : UUID?  {
+        UUID(uuidString: self) ?? nil
+    }
+    
 }

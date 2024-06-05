@@ -15,26 +15,20 @@ final class Chat: Model , @unchecked Sendable  {
 
     @ID(key: .id)
     var id: UUID?
-
-    @Field(key: .type)
-    var type: ChatType
-
-    @Parent(key: .createdByuser_id)
-    var createdByuser_id : User
+    
 
     @Siblings(through: ChatMember.self , from: \.$chat , to: \.$user)
     var members : [User]
     
     init() {}
-    init(id: UUID? = nil, type: ChatType, userID : User.IDValue ) {
+    init(id: UUID? = nil) {
         self.id = id
-        self.type = type
-        self.$createdByuser_id.id = userID
+       
         
     }
     
     var DTO : ChatDTO {
-        .init(chat_id : self.id , chat_type  : self.type.rawValue  , members: [])
+        .init(chat_id : self.id , members: [])
     }
     
     
@@ -42,13 +36,9 @@ final class Chat: Model , @unchecked Sendable  {
 }
 extension Chat {
     struct Create  : Content {
-        var type  : String?
         var members : [UserDTO]?
     }
 }
 
 
-enum ChatType : String , Content  {
-    case direct
-    case group
-}
+
