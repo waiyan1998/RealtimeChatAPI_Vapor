@@ -1,9 +1,4 @@
-//
-//  File.swift
-//  
-//
-//  Created by Brycen on 4/11/24.
-//
+/
 
 import Foundation
 import Fluent
