@@ -33,6 +33,11 @@ struct MessageDTO  : Content  {
     
         return model
     }
+    
+    var stringData : String  {
+        guard let data = try? JSONEncoder().encode(self) , let str = String(data: data , encoding: .utf8) else { return "" }
+        return str
+    }
   
   
 }

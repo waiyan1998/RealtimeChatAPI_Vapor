@@ -7,7 +7,7 @@ import WebSocketKit
 
 struct ChatController : RouteCollection {
     
-    let webSocketManager = WebSocketManager()
+   private let webSocketManager = WebSocketManager()
     
     func boot(routes: RoutesBuilder) throws {
         let chat = routes.grouped("chat")
@@ -20,60 +20,63 @@ struct ChatController : RouteCollection {
       
     }
     
-    @Sendable private func handleWebSocket(req: Request, ws: WebSocket) {
-         guard let id  = req.query[UUID.self, at: "id"] else {
+    @Sendable private func handleWebSocket(req: Request, ws: WebSocket)   {
+        
+       guard let id  = req.query[UUID.self, at: "id"] ,
+        let token = req.headers.bearerAuthorization?.token
+        else{
              ws.close(promise: nil)
              return
          }
-        guard let redirect_id  = req.query[UUID.self, at: "redirect_id"] else {
-            ws.close(promise: nil)
-            return
-        }
-        print(id)
-        print(redirect_id)
-
-         webSocketManager.addConnection(id, ws)
-       
-
-         ws.onText {  ws, text in
-             
-             guard  let data = text.data(using: .utf8) else { return }
-             
-             do{
-                 let message = try JSONDecoder().decode(MessageDTO.self, from: data)
-                 print(message)
-                 self.handleMessage(message, app: req.application , redirect_id )
-            }catch{
-                print(error.localizedDescription)
+        UserToken.query(on: req.db).filter(\.$value == token).first().whenComplete({ result in
+            switch result {
+            case .success(let token):
+             print("addConnection")
+                webSocketManager.addConnection(token!.$user.id, ws)
+                
+            case .failure(let failure):
+                print(failure.localizedDescription)
+                break
             }
-                                                        
+        })
         
-             
-         }
+      
+       
+            
+            ws.onText {  ws, text in
+                
+                guard  let data = text.data(using: .utf8) else { return }
+                
+                do{
+                    let message = try JSONDecoder().decode(MessageDTO.self, from: data)
+                    
+                    self.handleMessage(message, app: req.application, id)
+                    
+                }catch{
+                    print(error.localizedDescription)
+                }
+            }
+            
+        
+      
+         
      }
     
     
-    private func handleMessage(_ message: MessageDTO, app: Application , _ redirect_id : UUID ) {
+    private func handleMessage(_ message: MessageDTO, app: Application  , _ id : UUID ) {
         let newMessage = message.model
-        
-           newMessage.save(on: app.db).whenComplete { result in
-               switch result {
-               case .success:
-                   do {
-                       let messageData = try JSONEncoder().encode(message)
-                       if let messageString = String(data: messageData, encoding: .utf8) {
-                           
-                           
-                           webSocketManager.sendMessage(to: redirect_id , message: messageString)
-                           
-                       }
-                   } catch {
-                       print("Failed to encode message: \(error)")
-                   }
-               case .failure(let error):
-                   print("Failed to save message: \(error)")
-               }
-           }
+        print(id)
+        newMessage.save(on: app.db).whenSuccess {
+            print("Message Saved")
+            ChatMember.query(on: app.db).filter(\.$chat.$id == id ).all().whenSuccess { chat_members  in
+              
+                chat_members.forEach { member  in
+                    print("Sent to Member ID :" , member.$user.id  )
+                    webSocketManager.sendMessage(to: member.$user.id , message: message.stringData)
+                }
+            }
+        }
+               
        }
     
   
