@@ -154,23 +154,27 @@ struct ChatController : RouteCollection {
         guard let token = req.headers.bearerAuthorization?.token else {
             return MyResponse(statusCode: 0 , message: "Invalid User Token!!" , data: nil)
         }
-//        guard let  user_token = try await UserToken.query(on: req.db)
-//           .filter(\.$value == token).first()  else{
-//            return MyResponse(statusCode: 0 , message: "User Not Found", data: nil)
-//        }
-//       
-        let chats = try await Chat.query(on: req.db).all()
-        var dtos : [ChatDTO] = []
-                                                                                                                         
-        for chat in chats {
-            let dto = chat.DTO
-           
-            dtos.append(dto)
+        guard let  user_token = try await UserToken.query(on: req.db)
+            .filter(\.$value == token).first()  else{
+            return MyResponse(statusCode: 0 , message: "User Not Found", data: nil)
         }
         
+        let chat_ids = try await ChatMember.query(on: req.db).filter(\.$user.$id == user_token.$user.id ).all().map({ $0.$chat.id })
+        var chatDTOs : [ChatDTO] = []
         
-       
-        return MyResponse(statusCode: 1 , message: "Chat lists" , data : dtos )
+        for id in chat_ids {
+            guard let chat = try await Chat.find(id , on: req.db) else {
+                return MyResponse(statusCode: 0 , message: "No Chat", data: [])
+            }
+            let members = try await chat.$members.get(on: req.db)
+            var dto = chat.DTO
+            dto.members = members.map({ $0.DTO })
+            
+            chatDTOs.append(dto)
+        }
+//
+
+        return MyResponse(statusCode: 1 , message: "Chat lists" , data : chatDTOs )
     
     }
     
