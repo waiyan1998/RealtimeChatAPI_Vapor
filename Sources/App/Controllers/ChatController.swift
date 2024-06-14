@@ -14,7 +14,7 @@ struct ChatController : RouteCollection {
         let tokenProtected = chat.grouped(UserToken.authenticator())
         tokenProtected.post("add", use: createChat)
         tokenProtected.post("send", use: sendMessage)
-        tokenProtected.post("messages", use: messagelists)
+        tokenProtected.get("messages", use: messagelists)
         tokenProtected.get("getlists", use: chatlists)
         chat.webSocket("connect", onUpgrade: handleWebSocket)
       
@@ -145,6 +145,8 @@ struct ChatController : RouteCollection {
             return MyResponse(statusCode: 0, message: "Not Availiable Chat!!", data: nil)
         }
         let messages = try await Message.query(on: req.db).filter(\.$chat.$id == chat_id).sort(.created_at).all().map({ $0.DTO })
+        
+        print(messages)
         
         return MyResponse(statusCode: 1, message: "Success", data: messages)
     }

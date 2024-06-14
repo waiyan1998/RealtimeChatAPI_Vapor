@@ -35,7 +35,7 @@ final class Message : Model, @unchecked Sendable {
         }
     
     var DTO : MessageDTO {
-        return MessageDTO(message_id: self.id , sender_id: self.$sender.id , chat_id: self.$chat.id , createDate: self.created_at?.toString())
+        return MessageDTO(message_id: self.id , content : self.content, sender_id: self.$sender.id , chat_id: self.$chat.id , createDate: self.created_at?.toString())
     }
     
     
